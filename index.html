@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تعديل بيانات سنترال كوم النور</title>
+  <style>
+    body {
+      font-family: 'Tahoma', sans-serif;
+      background-color: #f6f2fb;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    header {
+      background-color: #7b1fa2;
+      color: white;
+      padding: 1rem;
+      font-size: 1.5rem;
+    }
+    main {
+      padding: 2rem;
+    }
+    .btn {
+      display: block;
+      margin: 1rem auto;
+      padding: 1rem 2rem;
+      background-color: #9c27b0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 80%;
+      max-width: 300px;
+    }
+    .btn:hover {
+      background-color: #7b1fa2;
+    }
+    #search {
+      width: 80%;
+      max-width: 400px;
+      padding: 0.8rem;
+      font-size: 1rem;
+      margin: 2rem auto;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #e1bee7;
+    }
+    .hidden {
+      display: none;
+    }
+    footer {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>تعديل بيانات سنترال كوم النور</header>
+  <main>
+    <input type="file" id="excelFile" accept=".xlsx" class="btn" />
+    <input type="text" id="search" placeholder="ابحث عن رقم تليفون أو كابينة..." oninput="renderTable()" />
+
+    <button class="btn" onclick="exportToExcel()">تصدير البيانات إلى Excel</button>
+
+    <div id="tableContainer"></div>
+
+    <div id="dbEditor" class="hidden">
+      <h3>إضافة أو تعديل البيانات</h3>
+      <form id="dataForm">
+        <input placeholder="رقم التليفون" id="phone" />
+        <input placeholder="رقم الكابينة" id="cabinet" />
+        <input placeholder="رقم البوكس" id="box_number" />
+        <input placeholder="ترمينال الداخل" id="terminalin" />
+        <input placeholder="ترمينال الخارج" id="terminaOut" />
+        <input placeholder="ملاحظات" id="notes" />
+        <input placeholder="تاريخ التعديل" id="lastModified" type="date" />
+        <button type="submit" class="btn">حفظ</button>
+      </form>
+    </div>
+  </main>
+  <footer>&copy; 2025 جميع الحقوق محفوظة - سنترال كوم النور</footer>
+
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script>
+    let data = [];
+
+    document.getElementById('excelFile').addEventListener('change', async function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const workbook = XLSX.read(event.target.result, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        data = XLSX.utils.sheet_to_json(worksheet);
+        localStorage.setItem('landlineData', JSON.stringify(data));
+        renderTable();
+      };
+      reader.readAsBinaryString(file);
+    });
+
+    function renderTable() {
+      const container = document.getElementById('tableContainer');
+      const searchValue = document.getElementById('search').value;
+      const filtered = data.filter(entry =>
+        Object.values(entry).some(value => value?.toString().includes(searchValue))
+      );
+      if (!filtered.length) return (container.innerHTML = '<p>لا توجد نتائج</p>');
+
+      const headers = Object.keys(filtered[0]);
+      let html = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+      filtered.forEach(row => {
+        html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function exportToExcel() {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      XLSX.writeFile(wb, 'landline_data.xlsx');
+    }
+
+    document.getElementById('dataForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const newData = {
+        phone: phone.value,
+        cabinet: cabinet.value,
+        box_number: box_number.value,
+        terminalin: terminalin.value,
+        terminaOut: terminaOut.value,
+        notes: notes.value,
+        lastModified: lastModified.value,
+      };
+      data.push(newData);
+      localStorage.setItem('landlineData', JSON.stringify(data));
+      renderTable();
+      this.reset();
+    });
+
+    function toggleHidden() {
+      document.getElementById('dbEditor').classList.toggle('hidden');
+    }
+
+    window.onload = function () {
+      const saved = localStorage.getItem('landlineData');
+      if (saved) {
+        data = JSON.parse(saved);
+        renderTable();
+      }
+    };
+  </script>
+</body>
+</html>
